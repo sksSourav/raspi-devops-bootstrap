@@ -1,5 +1,12 @@
 #bin/bash
 ###### After Installing linux OS on machine ######
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get dist-upgrade -y
+sudo apt-get autoremove -y
+sudo apt-get autoclean
+sudo apt-get clean
+sudo reboot
 ### Install git ###
 sudo apt install git
 ### Setup azure agent ###
