@@ -5,6 +5,7 @@ sudo apt install git
 ### Setup azure agent ###
 sudo mkdir .devops_azure_agent
 cd .devops_azure_agent
+curl -L -o agent.tar.gz https://vstsagentpackage.azureedge.net/agent/3.241.1/vsts-agent-linux-x64-3.241.1.tar.gz
 sudo tar zxvf ~/Downloads/vsts-agent-osx-x64-4.261.0.tar.gz
 ### Execute config script to setup agent. Provide requested input like azure pool, key, etc. ###
 sudo ./config.sh
