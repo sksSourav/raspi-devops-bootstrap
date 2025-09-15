@@ -16,6 +16,8 @@ sudo curl -L -o agent.tar.gz <url_from_website>
 sudo tar zxvf agent.tar.gz
 ### Execute config script to setup agent. Provide requested input like azure pool, key, etc. ###
 ./config.sh
+### ---- https://dev.azure.com/souravksahu
+### ---- go for PAT (personal access token) https://dev.azure.com/souravksahu/_usersSettings/tokens
 ### Install & Start the agent ###
 sudo ./svc.sh install
 sudo ./svc.sh start
