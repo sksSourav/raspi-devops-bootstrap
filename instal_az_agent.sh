@@ -9,6 +9,11 @@ sudo apt-get clean
 sudo reboot
 ### Install git ###
 sudo apt install git -y
+### Install docker ###
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+### keep user name as sks ###
+sudo usermod -aG docker sks
 ### Setup azure agent ###
 sudo mkdir .devops_azure_agent
 cd .devops_azure_agent
