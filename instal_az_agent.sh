@@ -1,4 +1,14 @@
 #bin/bash
+###### After Installing rPI_OS_64_Lite on SD card ######
+# User rPI image installer
+###### Move linux OS from SD card on to internal NVMe ######
+# Unmount NVMe #
+lsblk
+sudo umount /dev/nvme0n1*
+# Clone the entire SD card to the NVMe SSD
+sudo dd if=/dev/mmcblk0 of=/dev/nvme0n1 bs=4M status=progress
+# Use bellow rPI software to check boot order # always keep SD > NVMe > Network
+# sudo raspi-config
 ###### After Installing linux OS on machine ######
 sudo apt-get update
 sudo apt-get upgrade -y
