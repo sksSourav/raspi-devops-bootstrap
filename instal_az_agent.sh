@@ -37,6 +37,7 @@ sudo usermod -aG docker sks
 ### Setup azure agent ###
 sudo mkdir .devops_azure_agent
 cd .devops_azure_agent
+# Linux arm64 : https://download.agent.dev.azure.com/agent/4.264.2/vsts-agent-linux-arm64-4.264.2.tar.gz
 sudo curl -L -o agent.tar.gz <url_from_website>
 sudo tar zxvf agent.tar.gz
 ### Execute config script to setup agent. Provide requested input like azure pool, key, etc. ###
