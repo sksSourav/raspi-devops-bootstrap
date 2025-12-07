@@ -5,6 +5,16 @@
 # Unmount NVMe #
 lsblk
 sudo umount /dev/nvme0n1*
+# create a new partition table and a primary partition #
+sudo fdisk /dev/nvme0n1
+# Type o and press Enter to create a new, empty DOS partition table (wiping existing partition data).
+# Type n and press Enter to create a new partition.
+# Type p and press Enter for a primary partition.
+# Press Enter to accept the default partition number (1).
+# Press Enter twice to accept the default first and last sectors (this uses the maximum available space).
+# Type w and press Enter to write the changes to the disk and exit fdisk
+# Format the new partition #
+sudo mkfs.ext4 /dev/nvme0n1p1
 # Clone the entire SD card to the NVMe SSD
 sudo dd if=/dev/mmcblk0 of=/dev/nvme0n1 bs=4M status=progress
 # Use bellow rPI software to check boot order # always keep SD > NVMe > Network
