@@ -1,54 +1,96 @@
-#bin/bash
-###### After Installing rPI_OS_64_Lite on SD card ######
-# User rPI image installer
-###### Move linux OS from SD card on to internal NVMe ######
-# Unmount NVMe #
+#!/bin/bash
+# Script to setup Raspberry Pi with OS migration, updates, core tools, Docker, and Azure DevOps agent
+
+set -e
+
+##############################################
+# 1. OS Preparation: Migrate rPI OS to NVMe
+##############################################
+
+echo "List block devices for partition info:"
 lsblk
-sudo umount /dev/nvme0n1*
-# create a new partition table and a primary partition #
-sudo fdisk /dev/nvme0n1
-# Type o and press Enter to create a new, empty DOS partition table (wiping existing partition data).
-# Type n and press Enter to create a new partition.
-# Type p and press Enter for a primary partition.
-# Press Enter to accept the default partition number (1).
-# Press Enter twice to accept the default first and last sectors (this uses the maximum available space).
-# Type w and press Enter to write the changes to the disk and exit fdisk
-# Format the new partition #
+
+echo "Unmounting NVMe target partitions..."
+sudo umount /dev/nvme0n1* || true
+
+echo "Creating a new partition table and primary partition..."
+sudo fdisk /dev/nvme0n1 <<EOF
+o
+n
+p
+1
+
+
+w
+EOF
+
+echo "Formatting new NVMe partition as ext4..."
 sudo mkfs.ext4 /dev/nvme0n1p1
-# Clone the entire SD card to the NVMe SSD
+
+echo "Cloning SD card data to NVMe SSD..."
 sudo dd if=/dev/mmcblk0 of=/dev/nvme0n1 bs=4M status=progress
-# Use bellow rPI software to check boot order # always keep SD > NVMe > Network
+
+echo "Set boot order using raspi-config as needed (SD > NVMe > Network)."
 # sudo raspi-config
-###### After Installing linux OS on machine ######
+
+##############################################
+# 2. Update & Upgrade OS
+##############################################
+echo "Updating & Upgrading Raspberry Pi OS..."
 sudo apt-get update
 sudo apt-get upgrade -y
 sudo apt-get dist-upgrade -y
 sudo apt-get autoremove -y
 sudo apt-get autoclean
 sudo apt-get clean
-sudo reboot
-### Install git ###
+
+echo "Reboot recommended after updates."
+# sudo reboot
+
+##############################################
+# 3. Core Tools Installation
+##############################################
+
+echo "Installing Git..."
 sudo apt install git -y
-### Install docker ###
+
+echo "Installing Docker..."
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
-### keep user name as sks ###
+
+echo "Adding user 'sks' to Docker group..."
 sudo usermod -aG docker sks
-### Setup azure agent ###
-sudo mkdir .devops_azure_agent
-cd .devops_azure_agent
-# Linux arm64 : https://download.agent.dev.azure.com/agent/4.264.2/vsts-agent-linux-arm64-4.264.2.tar.gz
-sudo curl -L -o agent.tar.gz <url_from_website>
+
+##############################################
+# 4. Azure DevOps Agent Setup
+##############################################
+echo "Setting up Azure DevOps agent..."
+
+sudo mkdir -p /home/sks/.devops_azure_agent
+cd /home/sks/.devops_azure_agent
+
+echo "Download Azure DevOps agent (replace <url_from_website> appropriately)..."
+# For Linux arm64:
+sudo curl -L -o agent.tar.gz https://download.agent.dev.azure.com/agent/4.264.2/vsts-agent-linux-arm64-4.264.2.tar.gz
+
 sudo tar zxvf agent.tar.gz
-### Execute config script to setup agent. Provide requested input like azure pool, key, etc. ###
+
+echo "Run config script and provide values for Azure pool, token, etc."
 ./config.sh
-### ---- https://dev.azure.com/souravksahu
-### ---- go for PAT (personal access token) https://dev.azure.com/souravksahu/_usersSettings/tokens
-### Install & Start the agent ###
+
+# URLs for setup help
+# Azure DevOps Org: https://dev.azure.com/souravksahu
+# PAT Creation: https://dev.azure.com/souravksahu/_usersSettings/tokens
+
+echo "Installing & starting the agent service..."
 sudo ./svc.sh install
 sudo ./svc.sh start
-### Add agent to system startup ###
+
+echo "Adding Azure agent to system startup..."
 sudo systemctl enable vsts.agent.souravksahu.<pool>.<agent>.service
 
-###### check status of service ######
-# sudo systemctl status vsts.agent.*.service
+##############################################
+# 5. Service Status Check
+##############################################
+echo "Check service status with:"
+echo "sudo systemctl status vsts.agent.souravksahu.<pool>.<agent>.service"
