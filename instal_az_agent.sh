@@ -94,3 +94,12 @@ sudo systemctl enable vsts.agent.souravksahu.<pool>.<agent>.service
 ##############################################
 echo "Check service status with:"
 echo "sudo systemctl status vsts.agent.souravksahu.<pool>.<agent>.service"
+
+##############################################
+# 6. Docker commands
+##############################################
+# docker volume ls
+# docker volume rm <volume>
+# docker ps
+# docker images
+# docker rm -vf $(docker ps -aq);docker rmi -f $(docker images -aq) # remove all docker
