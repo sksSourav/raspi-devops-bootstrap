@@ -103,3 +103,37 @@ echo "sudo systemctl status vsts.agent.souravksahu.<pool>.<agent>.service"
 # docker ps
 # docker images
 # docker rm -vf $(docker ps -aq);docker rmi -f $(docker images -aq) # remove all docker
+
+##############################################
+# 6. Create a backup partition
+##############################################
+sudo parted /dev/nvme0n1 mkpart primary ext4 100% -20GB
+sudo mkfs.ext4 /dev/nvme0n1p3
+sudo mkdir -p /backup
+sudo mount /dev/nvme0n1p3 /backup
+sudo chown -R $USER:$USER /backup
+echo "/dev/nvme0n1p3 /backup ext4 defaults 0 2" | sudo tee -a /etc/fstab
+lsblk -f  # See new nvme0n1p3
+df -h /backup  # 20G available
+
+##############################################
+# 7. Create a backup (entire drive)
+##############################################
+sudo dd if=/dev/nvme0n1 of=/backup/full-backup-0.img bs=4M status=progress
+sudo gzip /backup/full-backup-*.img  # Compress
+
+##############################################
+# 8. Restore a backup (With in the working pi OS)
+##############################################
+sudo umount /backup  # Unmount backup
+sudo mount /dev/nvme0n1p3 /backup
+cd /backup
+sudo gunzip -c full-backup-0.img.gz | (dd bs=4M skip=1 status=progress | sudo dd of=/dev/nvme0n1p2 conv=fsync)
+sudo reboot
+
+##############################################
+# 9. Restore a backup (Using a like SD/USB bootable drive)
+##############################################
+sudo gunzip /backup/full-backup-0.img.gz
+sudo dd if=/backup/full-backup-0.img of=/dev/nvme0n1 bs=4M status=progress conv=fsync
+sync
