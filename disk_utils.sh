@@ -39,6 +39,7 @@ check_root() {
 
 cmd_prepare_nvme() {
     check_root
+    lsblk
     confirm "$NVME_DEV"
     
     echo "Unmounting $NVME_DEV..."
@@ -56,25 +57,29 @@ w
 EOF
     echo "Formatting as ext4..."
     mkfs.ext4 "${NVME_DEV}p1"
+    lsblk
     echo "Done."
 }
 
 cmd_clone_sd() {
     check_root
+    lsblk
     confirm "$NVME_DEV (Overwriting with data from $SD_DEV)"
     
     echo "Cloning $SD_DEV to $NVME_DEV..."
     dd if=$SD_DEV of=$NVME_DEV bs=4M status=progress
+    lsblk
     echo "Clone complete."
 }
 
 cmd_setup_backup() {
     check_root
+    lsblk
     echo "Creating backup partition (p3) on $NVME_DEV..."
     # Warning: This assumes space is available at the end of the drive.
-    parted $NVME_DEV mkpart primary ext4 100% -20GB
+    parted $NVME_DEV -- mkpart primary ext4 -20GB 100%
     mkfs.ext4 "${NVME_DEV}${BACKUP_PARTITION_ID}"
-    
+    lsblk
     mkdir -p $BACKUP_DIR
     mount "${NVME_DEV}${BACKUP_PARTITION_ID}" $BACKUP_DIR
     
@@ -82,11 +87,13 @@ cmd_setup_backup() {
     if ! grep -q "$BACKUP_DIR" /etc/fstab; then
         echo "${NVME_DEV}${BACKUP_PARTITION_ID} $BACKUP_DIR ext4 defaults 0 2" | tee -a /etc/fstab
     fi
+    lsblk
     echo "Backup partition setup complete."
 }
 
 cmd_create_backup() {
     check_root
+    lsblk
     if [ ! -d "$BACKUP_DIR" ]; then
         echo "Backup directory $BACKUP_DIR does not exist. Run setup_backup first."
         exit 1
@@ -97,6 +104,7 @@ cmd_create_backup() {
     
     echo "Creating backup to $BACKUP_FILE..."
     dd if=$NVME_DEV of=$BACKUP_FILE bs=4M status=progress
+    lsblk
     echo "Compressing..."
     gzip $BACKUP_FILE
     echo "Backup created: ${BACKUP_FILE}.gz"

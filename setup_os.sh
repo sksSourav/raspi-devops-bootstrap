@@ -37,16 +37,7 @@ else
     echo "Docker is already installed."
 fi
 
-# 3.1 Install Podman (Parallel to Docker)
-if ! command -v podman &> /dev/null; then
-    echo "Installing Podman..."
-    apt-get install -y podman
-    echo "Podman installed."
-else
-    echo "Podman is already installed."
-fi
-
-# 4. Add user to Docker group
+# 3.1 Add user to Docker group
 CURRENT_USER=${SUDO_USER:-$USER}
 if [ "$CURRENT_USER" != "root" ]; then
     echo "Adding user '$CURRENT_USER' to Docker group..."
@@ -58,7 +49,7 @@ fi
 
 echo "Setup complete. A reboot is recommended if kernel updates were installed."
 
-# 5. Add Docker Start-Stop to boot, reboot, shutdown
+# 3.2 Add Docker Pre-Stop and Post-Start services to boot, reboot, shutdown
 
 sudo tee /etc/systemd/system/docker-pre-stop.service > /dev/null <<EOF
 [Unit]
@@ -97,3 +88,12 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable docker-post-start.service
+
+# 4. Install Podman (Parallel to Docker)
+if ! command -v podman &> /dev/null; then
+    echo "Installing Podman..."
+    apt-get install -y podman
+    echo "Podman installed."
+else
+    echo "Podman is already installed."
+fi
