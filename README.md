@@ -7,11 +7,14 @@ This repository contains scripts to setup a Raspberry Pi (or similar Linux envir
 The original single script has been split into three modular scripts for safety and clarity:
 
 ### 1. `setup_os.sh`
-**Purpose**: Prepares the OS environment.
-- Updates and upgrades apt packages.
-- Installs Git.
-- Installs Docker and adds the current user to the `docker` group.
-- Installs Podman (in parallel to Docker).
+**Purpose**: Interactive menu-driven script to prepare the OS environment.
+**Features**:
+- **Updates & Upgrades**: Update Raspberry Pi OS packages.
+- **Git**: Install Git.
+- **Docker**: Install Docker, add user to group, and configure systemd services for graceful shutdown/start.
+- **Podman**: Install Podman (alongside Docker).
+- **UFW**: Setup Basic Firewall (Deny Incoming, Allow Outgoing, Allow SSH).
+- **System Config**: Interactive menu to Enable/Disable **OverlayFS** and **Read-Only Boot** properties.
 
 **Usage**:
 ```bash

@@ -1,57 +1,88 @@
 #!/bin/bash
 # setup_os.sh
-# Purpose: Update Raspberry Pi OS and install core tools (Git, Docker).
+# Purpose: Interactive setup for Raspberry Pi OS (Update, Git, Docker, Podman, UFW, OverlayFS)
 # Usage: sudo ./setup_os.sh
+
+# Ensure script is run as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This script must be run as root. User 'sudo ./setup_os.sh'"
+    exit 1
+fi
 
 set -e
 
-echo "Starting OS Update & Setup..."
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
 
+function print_header() {
+    echo "============================================================"
+    echo "   $1"
+    echo "============================================================"
+}
+
+function pause() {
+    read -p "Press Enter to continue..."
+}
+
+# ==============================================================================
 # 1. Update & Upgrade OS
-echo "Updating & Upgrading Raspberry Pi OS..."
-apt-get update
-apt-get upgrade -y
-apt-get dist-upgrade -y
-apt-get autoremove -y
-apt-get autoclean
-apt-get clean
+# ==============================================================================
+function update_os() {
+    print_header "Updating & Upgrading Raspberry Pi OS"
+    apt-get update
+    apt-get upgrade -y
+    apt-get dist-upgrade -y
+    apt-get autoremove -y
+    apt-get autoclean
+    apt-get clean
+    echo "OS updates complete."
+    pause
+}
 
-echo "OS updates complete."
-
+# ==============================================================================
 # 2. Install Git
-if ! command -v git &> /dev/null; then
-    echo "Installing Git..."
-    apt install git -y
-else
-    echo "Git is already installed."
-fi
+# ==============================================================================
+function install_git() {
+    print_header "Installing Git"
+    if ! command -v git &> /dev/null; then
+        echo "Installing Git..."
+        apt install git -y
+        echo "Git installed successfully."
+    else
+        echo "Git is already installed."
+    fi
+    pause
+}
 
+# ==============================================================================
 # 3. Install Docker
-if ! command -v docker &> /dev/null; then
-    echo "Installing Docker..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
-    rm get-docker.sh
-    echo "Docker installed."
-else
-    echo "Docker is already installed."
-fi
+# ==============================================================================
+function install_docker() {
+    print_header "Installing Docker"
+    if ! command -v docker &> /dev/null; then
+        echo "Installing Docker..."
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        rm get-docker.sh
+        echo "Docker installed."
+    else
+        echo "Docker is already installed."
+    fi
 
-# 3.1 Add user to Docker group
-CURRENT_USER=${SUDO_USER:-$USER}
-if [ "$CURRENT_USER" != "root" ]; then
-    echo "Adding user '$CURRENT_USER' to Docker group..."
-    usermod -aG docker "$CURRENT_USER"
-    echo "User added. You may need to logout and login again for group changes to take effect."
-else
-    echo "Running as root/sudo without a specific user context. Skipping group add."
-fi
+    # Add user to Docker group
+    CURRENT_USER=${SUDO_USER:-$USER}
+    if [ "$CURRENT_USER" != "root" ]; then
+        echo "Adding user '$CURRENT_USER' to Docker group..."
+        usermod -aG docker "$CURRENT_USER" || true
+        echo "User added to docker group."
+    else
+        echo "Running as root without sudo context. Skipping group add."
+    fi
 
-echo "Setup complete. A reboot is recommended if kernel updates were installed."
-
-# 3.2 Add Docker Pre-Stop and Post-Start services to boot, reboot, shutdown
-
-sudo tee /etc/systemd/system/docker-pre-stop.service > /dev/null <<EOF
+    # Docker Pre-Stop Service
+    echo "Configuring Docker Pre-Stop service..."
+    tee /etc/systemd/system/docker-pre-stop.service > /dev/null <<EOF
 [Unit]
 Description=Gracefully stop Docker containers before shutdown
 DefaultDependencies=no
@@ -66,11 +97,12 @@ RemainAfterExit=yes
 [Install]
 WantedBy=shutdown.target reboot.target halt.target
 EOF
+    systemctl daemon-reload
+    systemctl enable docker-pre-stop.service
 
-sudo systemctl daemon-reload
-sudo systemctl enable docker-pre-stop.service
-
-sudo tee /etc/systemd/system/docker-post-start.service > /dev/null <<EOF
+    # Docker Post-Start Service
+    echo "Configuring Docker Post-Start service..."
+    tee /etc/systemd/system/docker-post-start.service > /dev/null <<EOF
 [Unit]
 Description=Start Docker containers after boot
 After=docker.service networking.service
@@ -85,47 +117,142 @@ RemainAfterExit=yes
 [Install]
 WantedBy=multi-user.target
 EOF
+    systemctl daemon-reload
+    systemctl enable docker-post-start.service
 
-sudo systemctl daemon-reload
-sudo systemctl enable docker-post-start.service
+    echo "Docker setup complete."
+    pause
+}
 
-# 4. Install Podman (Parallel to Docker)
-if ! command -v podman &> /dev/null; then
-    echo "Installing Podman..."
-    apt-get install -y podman
-    echo "Podman installed."
-else
-    echo "Podman is already installed."
-fi
+# ==============================================================================
+# 4. Install Podman
+# ==============================================================================
+function install_podman() {
+    print_header "Installing Podman"
+    if ! command -v podman &> /dev/null; then
+        echo "Installing Podman..."
+        apt-get install -y podman
+        echo "Podman installed."
+    else
+        echo "Podman is already installed."
+    fi
+    pause
+}
 
-# 5. Install ufw
-if ! command -v ufw &> /dev/null; then
-    echo "Installing ufw..."
-    apt-get install -y ufw
+# ==============================================================================
+# 5. Setup UFW Firewall
+# ==============================================================================
+function setup_ufw() {
+    print_header "Setting up UFW Firewall"
+    if ! command -v ufw &> /dev/null; then
+        echo "Installing ufw..."
+        apt-get install -y ufw
+    fi
+    
+    echo "Configuring UFW..."
     ufw --force reset
     ufw allow ssh
     ufw default deny incoming
     ufw default allow outgoing
-    ufw enable
+    # Uncomment/add specific ports here as needed
+    # ufw allow 80/tcp
+    # ufw allow 443/tcp
+    ufw --force enable
     ufw status verbose
-    echo "ufw installed."
-else
-    echo "ufw is already installed."
-fi
+    echo "UFW setup complete."
+    pause
+}
 
-# 6. Enable overlay fs
-raspi-config nonint disable_overlayfs
-raspi-config nonint get_overlayfs && echo "OverlayFS: ENABLED" || echo "OverlayFS: DISABLED"
- 
+# ==============================================================================
+# 6. Configure OverlayFS & Boot Read-Only
+# ==============================================================================
+function configure_overlay() {
+    print_header "Configure OverlayFS & Read-Only Boot"
+    
+    echo "Current Status:"
+    raspi-config nonint get_overlayfs && echo "  OverlayFS: ENABLED" || echo "  OverlayFS: DISABLED"
+    raspi-config nonint get_bootro && echo "  Boot RO:   ENABLED" || echo "  Boot RO:   DISABLED"
+    echo ""
+    echo "Select an option:"
+    echo "1) Enable OverlayFS (Protects SD card)"
+    echo "2) Disable OverlayFS (Allows changes)"
+    echo "3) Enable Read-Only Boot"
+    echo "4) Disable Read-Only Boot"
+    echo "5) Go Back"
+    
+    read -p "Choice: " subchoice
+    case $subchoice in
+        1)
+            raspi-config nonint enable_overlayfs
+            echo "OverlayFS enabled."
+            ;;
+        2)
+            raspi-config nonint disable_overlayfs
+            echo "OverlayFS disabled."
+            ;;
+        3)
+            raspi-config nonint enable_bootro
+            echo "Read-Only Boot enabled."
+            ;;
+        4)
+            raspi-config nonint disable_bootro
+            echo "Read-Only Boot disabled."
+            ;;
+        5)
+            return
+            ;;
+        *)
+            echo "Invalid option."
+            ;;
+    esac
+    pause
+}
 
-# 7. Enable boot ro
-raspi-config nonint disable_bootro
-raspi-config nonint get_bootro && echo "Boot RO: ENABLED" || echo "Boot RO: DISABLED"  
+# ==============================================================================
+# Main Menu
+# ==============================================================================
+function show_menu() {
+    clear
+    print_header "Raspberry Pi Setup Menu"
+    echo "1) Update & Upgrade OS"
+    echo "2) Install Git"
+    echo "3) Install Docker (inc. Services)"
+    echo "4) Install Podman"
+    echo "5) Setup UFW Firewall"
+    echo "6) Configure OverlayFS / Read-Only Boot"
+    echo "----------------------------------------"
+    echo "A) Run ALL Setup Steps (1-5, leaves OverlayFS manual)"
+    echo "X) Exit"
+    echo "----------------------------------------"
+}
 
-# 8. Disable overlay fs
-raspi-config nonint disable_overlayfs
-raspi-config nonint get_overlayfs && echo "OverlayFS: ENABLED" || echo "OverlayFS: DISABLED"
-
-# 9. Disable boot ro
-raspi-config nonint disable_bootro
-raspi-config nonint get_bootro && echo "Boot RO: ENABLED" || echo "Boot RO: DISABLED"
+# Main Loop
+while true; do
+    show_menu
+    read -p "Select an option: " choice
+    case $choice in
+        1) update_os ;;
+        2) install_git ;;
+        3) install_docker ;;
+        4) install_podman ;;
+        5) setup_ufw ;;
+        6) configure_overlay ;;
+        [aA]) 
+            update_os
+            install_git
+            install_docker
+            install_podman
+            setup_ufw
+            echo "All automated steps completed. Configure OverlayFS manually if needed."
+            pause
+            ;;
+        [xX])
+            echo "Exiting."
+            exit 0
+            ;;
+        *)
+            echo "Invalid option, please try again."
+            pause
+            ;;
+    esac
+done
