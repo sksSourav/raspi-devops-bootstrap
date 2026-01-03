@@ -254,16 +254,11 @@ function configure_ufw_ports() {
 function configure_overlay() {
     print_header "Configure OverlayFS & Read-Only Boot"
     
-    echo "Current Status:"
-    raspi-config nonint get_overlayfs && echo "  OverlayFS: ENABLED" || echo "  OverlayFS: DISABLED"
-    raspi-config nonint get_bootro && echo "  Boot RO:   ENABLED" || echo "  Boot RO:   DISABLED"
     echo ""
     echo "Select an option:"
     echo "1) Enable OverlayFS (Protects SD card)"
     echo "2) Disable OverlayFS (Allows changes)"
-    echo "3) Enable Read-Only Boot"
-    echo "4) Disable Read-Only Boot"
-    echo "5) Go Back"
+    echo "X) Go Back"
     
     read -p "Choice: " subchoice
     case $subchoice in
@@ -275,27 +270,7 @@ function configure_overlay() {
             raspi-config nonint disable_overlayfs
             echo "OverlayFS disabled."
             ;;
-        3)
-            if raspi-config nonint get_overlayfs; then
-                echo "ERROR: OverlayFS is currently ACTIVE."
-                echo "You cannot safely enable Read-Only Boot while OverlayFS is active."
-                echo "Please Disable OverlayFS (Option 2) and Reboot first."
-            else
-                raspi-config nonint enable_bootro
-                echo "Read-Only Boot enabled."
-            fi
-            ;;
-        4)
-            if raspi-config nonint get_overlayfs; then
-                echo "ERROR: OverlayFS is currently ACTIVE."
-                echo "You cannot safely disable Read-Only Boot while OverlayFS is active."
-                echo "Please Disable OverlayFS (Option 2) and Reboot first."
-            else
-                raspi-config nonint disable_bootro
-                echo "Read-Only Boot disabled."
-            fi
-            ;;
-        5)
+        X)
             return
             ;;
         *)
