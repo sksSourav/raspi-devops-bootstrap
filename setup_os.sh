@@ -210,9 +210,31 @@ function setup_ufw() {
     ufw allow ssh
     ufw default deny incoming
     ufw default allow outgoing
-    # Uncomment/add specific ports here as needed
-    # ufw allow 80/tcp
-    # ufw allow 443/tcp
+    # Interactive Port Setup
+    while true; do
+        read -p "Do you want to open any additional ports? (y/n): " open_ports_choice
+        case $open_ports_choice in
+            [yY]*)
+                read -p "Enter Port Number (e.g., 8080): " ufw_port
+                read -p "Enter Protocol (tcp/udp) [default: tcp]: " ufw_proto
+                ufw_proto=${ufw_proto:-tcp}
+                
+                if [[ -n "$ufw_port" ]]; then
+                    echo "Allowing $ufw_port/$ufw_proto..."
+                    ufw allow "$ufw_port/$ufw_proto"
+                else
+                    echo "Invalid port. Skipping."
+                fi
+                ;;
+            [nN]*)
+                break
+                ;;
+            *)
+                echo "Please answer y or n."
+                ;;
+        esac
+    done
+
     ufw --force enable
     ufw status verbose
     echo "UFW setup complete."
@@ -247,12 +269,24 @@ function configure_overlay() {
             echo "OverlayFS disabled."
             ;;
         3)
-            raspi-config nonint enable_bootro
-            echo "Read-Only Boot enabled."
+            if raspi-config nonint get_overlayfs; then
+                echo "ERROR: OverlayFS is currently ACTIVE."
+                echo "You cannot safely enable Read-Only Boot while OverlayFS is active."
+                echo "Please Disable OverlayFS (Option 2) and Reboot first."
+            else
+                raspi-config nonint enable_bootro
+                echo "Read-Only Boot enabled."
+            fi
             ;;
         4)
-            raspi-config nonint disable_bootro
-            echo "Read-Only Boot disabled."
+            if raspi-config nonint get_overlayfs; then
+                echo "ERROR: OverlayFS is currently ACTIVE."
+                echo "You cannot safely disable Read-Only Boot while OverlayFS is active."
+                echo "Please Disable OverlayFS (Option 2) and Reboot first."
+            else
+                raspi-config nonint disable_bootro
+                echo "Read-Only Boot disabled."
+            fi
             ;;
         5)
             return
