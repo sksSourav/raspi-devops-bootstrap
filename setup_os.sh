@@ -136,6 +136,62 @@ function install_podman() {
     else
         echo "Podman is already installed."
     fi
+
+    # Add user to Podman group
+    CURRENT_USER=${SUDO_USER:-$USER}
+    if [ "$CURRENT_USER" != "root" ]; then
+        echo "Adding user '$CURRENT_USER' to Podman group..."
+        # Only try if the group exists (Podman often doesn't create a group by default)
+        if getent group podman >/dev/null; then
+            usermod -aG podman "$CURRENT_USER" || true
+            echo "User added to podman group."
+        else
+            echo "Group 'podman' not found (this is normal for rootless Podman). Skipping."
+        fi
+    else
+        echo "Running as root without sudo context. Skipping group add."
+    fi
+
+    # Podman Pre-Stop Service
+    echo "Configuring Podman Pre-Stop service..."
+    tee /etc/systemd/system/podman-pre-stop.service > /dev/null <<EOF
+[Unit]
+Description=Gracefully stop Podman containers before shutdown
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'podman stop \$(podman ps --filter "status=running" -q) || true'
+TimeoutSec=30
+RemainAfterExit=yes
+
+[Install]
+WantedBy=shutdown.target reboot.target halt.target
+EOF
+    systemctl daemon-reload
+    systemctl enable podman-pre-stop.service
+
+    # Podman Post-Start Service
+    echo "Configuring Podman Post-Start service..."
+    tee /etc/systemd/system/podman-post-start.service > /dev/null <<EOF
+[Unit]
+Description=Start Podman containers after boot
+After=networking.service
+Wants=networking.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'podman start \$(podman ps -a --filter "status=exited" -q) || true'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable podman-post-start.service
+
+    echo "Podman setup complete."
     pause
 }
 
