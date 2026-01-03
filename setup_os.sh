@@ -270,7 +270,7 @@ function configure_overlay() {
             raspi-config nonint disable_overlayfs
             echo "OverlayFS disabled."
             ;;
-        X)
+        [xX])
             return
             ;;
         *)
