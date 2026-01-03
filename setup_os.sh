@@ -97,3 +97,35 @@ if ! command -v podman &> /dev/null; then
 else
     echo "Podman is already installed."
 fi
+
+# 5. Install ufw
+if ! command -v ufw &> /dev/null; then
+    echo "Installing ufw..."
+    apt-get install -y ufw
+    ufw --force reset
+    ufw allow ssh
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw enable
+    ufw status verbose
+    echo "ufw installed."
+else
+    echo "ufw is already installed."
+fi
+
+# 6. Enable overlay fs
+raspi-config nonint disable_overlayfs
+raspi-config nonint get_overlayfs && echo "OverlayFS: ENABLED" || echo "OverlayFS: DISABLED"
+ 
+
+# 7. Enable boot ro
+raspi-config nonint disable_bootro
+raspi-config nonint get_bootro && echo "Boot RO: ENABLED" || echo "Boot RO: DISABLED"  
+
+# 8. Disable overlay fs
+raspi-config nonint disable_overlayfs
+raspi-config nonint get_overlayfs && echo "OverlayFS: ENABLED" || echo "OverlayFS: DISABLED"
+
+# 9. Disable boot ro
+raspi-config nonint disable_bootro
+raspi-config nonint get_bootro && echo "Boot RO: ENABLED" || echo "Boot RO: DISABLED"
