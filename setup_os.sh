@@ -210,9 +210,6 @@ function setup_ufw() {
     ufw allow ssh
     ufw default deny incoming
     ufw default allow outgoing
-    configure_ufw_ports
-
-
     ufw --force enable
     ufw status verbose
     echo "UFW setup complete."
@@ -236,6 +233,7 @@ function configure_ufw_ports() {
                 if [[ -n "$ufw_port" ]]; then
                     echo "Allowing $ufw_port/$ufw_proto..."
                     ufw allow "$ufw_port/$ufw_proto"
+                    ufw status verbose
                 else
                     echo "Invalid port. Skipping."
                 fi
