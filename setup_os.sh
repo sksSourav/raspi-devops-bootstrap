@@ -210,6 +210,20 @@ function setup_ufw() {
     ufw allow ssh
     ufw default deny incoming
     ufw default allow outgoing
+    configure_ufw_ports
+
+
+    ufw --force enable
+    ufw status verbose
+    echo "UFW setup complete."
+    pause
+}
+
+# ==============================================================================
+# 5b. Configure UFW Ports (Interactive)
+# ==============================================================================
+function configure_ufw_ports() {
+    print_header "Configure generic UFW Ports"
     # Interactive Port Setup
     while true; do
         read -p "Do you want to open any additional ports? (y/n): " open_ports_choice
@@ -234,11 +248,6 @@ function setup_ufw() {
                 ;;
         esac
     done
-
-    ufw --force enable
-    ufw status verbose
-    echo "UFW setup complete."
-    pause
 }
 
 # ==============================================================================
@@ -308,8 +317,10 @@ function show_menu() {
     echo "2) Install Git"
     echo "3) Install Docker (inc. Services)"
     echo "4) Install Podman"
-    echo "5) Setup UFW Firewall"
-    echo "6) Configure OverlayFS / Read-Only Boot"
+    echo "5) Setup UFW Firewall (Reset & Base)"
+    echo "6) Configure UFW Ports (Open specific ports)"
+    echo "7) Configure OverlayFS / Read-Only Boot"
+
     echo "----------------------------------------"
     echo "A) Run ALL Setup Steps (1-5, leaves OverlayFS manual)"
     echo "X) Exit"
@@ -326,7 +337,9 @@ while true; do
         3) install_docker ;;
         4) install_podman ;;
         5) setup_ufw ;;
-        6) configure_overlay ;;
+        6) configure_ufw_ports; pause ;;
+        7) configure_overlay ;;
+
         [aA]) 
             update_os
             install_git
